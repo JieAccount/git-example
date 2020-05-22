@@ -12,10 +12,10 @@ MAKEFILE      = Makefile
 
 CC            = gcc
 CXX           = g++
-DEFINES       = -DQT_QML_DEBUG -DQT_CORE_LIB
+DEFINES       = -DQT_QML_DEBUG -DQT_NETWORK_LIB -DQT_CORE_LIB
 CFLAGS        = -pipe -g -Wall -W -D_REENTRANT -fPIC $(DEFINES)
 CXXFLAGS      = -pipe -g -std=gnu++0x -Wall -W -D_REENTRANT -fPIC $(DEFINES)
-INCPATH       = -I../network -I. -I/opt/Qt5.6.0/5.6/gcc_64/include -I/opt/Qt5.6.0/5.6/gcc_64/include/QtCore -I. -I/opt/Qt5.6.0/5.6/gcc_64/mkspecs/linux-g++
+INCPATH       = -I../network -I. -I/opt/Qt5.6.0/5.6/gcc_64/include -I/opt/Qt5.6.0/5.6/gcc_64/include/QtNetwork -I/opt/Qt5.6.0/5.6/gcc_64/include/QtCore -I. -I/opt/Qt5.6.0/5.6/gcc_64/mkspecs/linux-g++
 QMAKE         = /opt/Qt5.6.0/5.6/gcc_64/bin/qmake
 DEL_FILE      = rm -f
 CHK_DIR_EXISTS= test -d
@@ -36,7 +36,7 @@ DISTNAME      = network1.0.0
 DISTDIR = /usr/Share/git/git-example/build-network-Desktop_Qt_5_6_0_GCC_64bit-Debug/.tmp/network1.0.0
 LINK          = g++
 LFLAGS        = -Wl,-z,origin -Wl,-rpath,\$$ORIGIN -Wl,-rpath,/opt/Qt5.6.0/5.6/gcc_64/lib
-LIBS          = $(SUBLIBS) -L/opt/Qt5.6.0/5.6/gcc_64/lib -lQt5Core -lpthread 
+LIBS          = $(SUBLIBS) -L/opt/Qt5.6.0/5.6/gcc_64/lib -lQt5Network -lQt5Core -lpthread 
 AR            = ar cqs
 RANLIB        = 
 SED           = sed
@@ -48,8 +48,11 @@ OBJECTS_DIR   = ./
 
 ####### Files
 
-SOURCES       = ../network/main.cpp 
-OBJECTS       = main.o
+SOURCES       = ../network/main.cpp \
+		../network/tcpserver.cpp moc_tcpserver.cpp
+OBJECTS       = main.o \
+		tcpserver.o \
+		moc_tcpserver.o
 DIST          = /opt/Qt5.6.0/5.6/gcc_64/mkspecs/features/spec_pre.prf \
 		/opt/Qt5.6.0/5.6/gcc_64/mkspecs/common/unix.conf \
 		/opt/Qt5.6.0/5.6/gcc_64/mkspecs/common/linux.conf \
@@ -182,7 +185,8 @@ DIST          = /opt/Qt5.6.0/5.6/gcc_64/mkspecs/features/spec_pre.prf \
 		/opt/Qt5.6.0/5.6/gcc_64/mkspecs/features/exceptions.prf \
 		/opt/Qt5.6.0/5.6/gcc_64/mkspecs/features/yacc.prf \
 		/opt/Qt5.6.0/5.6/gcc_64/mkspecs/features/lex.prf \
-		../network/network.pro  ../network/main.cpp
+		../network/network.pro ../network/tcpserver.h ../network/main.cpp \
+		../network/tcpserver.cpp
 QMAKE_TARGET  = network
 DESTDIR       = 
 TARGET        = network
@@ -327,6 +331,7 @@ Makefile: ../network/network.pro /opt/Qt5.6.0/5.6/gcc_64/mkspecs/linux-g++/qmake
 		/opt/Qt5.6.0/5.6/gcc_64/mkspecs/features/yacc.prf \
 		/opt/Qt5.6.0/5.6/gcc_64/mkspecs/features/lex.prf \
 		../network/network.pro \
+		/opt/Qt5.6.0/5.6/gcc_64/lib/libQt5Network.prl \
 		/opt/Qt5.6.0/5.6/gcc_64/lib/libQt5Core.prl
 	$(QMAKE) -spec linux-g++ CONFIG+=debug CONFIG+=qml_debug -o Makefile ../network/network.pro
 /opt/Qt5.6.0/5.6/gcc_64/mkspecs/features/spec_pre.prf:
@@ -462,6 +467,7 @@ Makefile: ../network/network.pro /opt/Qt5.6.0/5.6/gcc_64/mkspecs/linux-g++/qmake
 /opt/Qt5.6.0/5.6/gcc_64/mkspecs/features/yacc.prf:
 /opt/Qt5.6.0/5.6/gcc_64/mkspecs/features/lex.prf:
 ../network/network.pro:
+/opt/Qt5.6.0/5.6/gcc_64/lib/libQt5Network.prl:
 /opt/Qt5.6.0/5.6/gcc_64/lib/libQt5Core.prl:
 qmake: FORCE
 	@$(QMAKE) -spec linux-g++ CONFIG+=debug CONFIG+=qml_debug -o Makefile ../network/network.pro
@@ -477,7 +483,8 @@ dist: distdir FORCE
 distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
-	$(COPY_FILE) --parents ../network/main.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents ../network/tcpserver.h $(DISTDIR)/
+	$(COPY_FILE) --parents ../network/main.cpp ../network/tcpserver.cpp $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -500,22 +507,12 @@ check: first
 
 compiler_rcc_make_all:
 compiler_rcc_clean:
-compiler_moc_header_make_all:
+compiler_moc_header_make_all: moc_tcpserver.cpp
 compiler_moc_header_clean:
-compiler_moc_source_make_all:
-compiler_moc_source_clean:
-compiler_yacc_decl_make_all:
-compiler_yacc_decl_clean:
-compiler_yacc_impl_make_all:
-compiler_yacc_impl_clean:
-compiler_lex_make_all:
-compiler_lex_clean:
-compiler_clean: 
-
-####### Compile
-
-main.o: ../network/main.cpp /opt/Qt5.6.0/5.6/gcc_64/include/QtCore/QCoreApplication \
-		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qcoreapplication.h \
+	-$(DEL_FILE) moc_tcpserver.cpp
+moc_tcpserver.cpp: /opt/Qt5.6.0/5.6/gcc_64/include/QtCore/QList \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qlist.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qalgorithms.h \
 		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qglobal.h \
 		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qconfig.h \
 		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qfeatures.h \
@@ -545,33 +542,181 @@ main.o: ../network/main.cpp /opt/Qt5.6.0/5.6/gcc_64/include/QtCore/QCoreApplicat
 		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qmutex.h \
 		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qnumeric.h \
 		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qversiontagging.h \
-		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qstring.h \
-		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qchar.h \
-		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qbytearray.h \
-		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qrefcount.h \
-		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qnamespace.h \
-		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qarraydata.h \
-		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qstringbuilder.h \
-		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qobject.h \
-		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qobjectdefs.h \
-		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qobjectdefs_impl.h \
-		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qlist.h \
-		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qalgorithms.h \
 		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qiterator.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qrefcount.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qarraydata.h \
 		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qhashfunctions.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qchar.h \
 		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qpair.h \
 		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qbytearraylist.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qbytearray.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qnamespace.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qstring.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qstringbuilder.h \
 		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qstringlist.h \
 		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qregexp.h \
 		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qstringmatcher.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtNetwork/QTcpServer \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtNetwork/qtcpserver.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qobject.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qobjectdefs.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qobjectdefs_impl.h \
 		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qcoreevent.h \
 		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qscopedpointer.h \
 		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qmetatype.h \
 		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qvarlengtharray.h \
 		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qcontainerfwd.h \
 		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qobject_impl.h \
-		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qeventloop.h
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtNetwork/qabstractsocket.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qiodevice.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qdebug.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qhash.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qmap.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qtextstream.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qlocale.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qvariant.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qshareddata.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qvector.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qpoint.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qset.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qcontiguouscache.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtNetwork/qhostaddress.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtNetwork/QTcpSocket \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtNetwork/qtcpsocket.h \
+		../network/tcpserver.h
+	/opt/Qt5.6.0/5.6/gcc_64/bin/moc $(DEFINES) -I/opt/Qt5.6.0/5.6/gcc_64/mkspecs/linux-g++ -I/usr/Share/git/git-example/network -I/opt/Qt5.6.0/5.6/gcc_64/include -I/opt/Qt5.6.0/5.6/gcc_64/include/QtNetwork -I/opt/Qt5.6.0/5.6/gcc_64/include/QtCore -I. ../network/tcpserver.h -o moc_tcpserver.cpp
+
+compiler_moc_source_make_all:
+compiler_moc_source_clean:
+compiler_yacc_decl_make_all:
+compiler_yacc_decl_clean:
+compiler_yacc_impl_make_all:
+compiler_yacc_impl_clean:
+compiler_lex_make_all:
+compiler_lex_clean:
+compiler_clean: compiler_moc_header_clean 
+
+####### Compile
+
+main.o: ../network/main.cpp /opt/Qt5.6.0/5.6/gcc_64/include/QtCore/QDebug \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qdebug.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qalgorithms.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qglobal.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qconfig.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qfeatures.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qsystemdetection.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qprocessordetection.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qcompilerdetection.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qtypeinfo.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qtypetraits.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qisenum.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qsysinfo.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qlogging.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qflags.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qatomic.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qbasicatomic.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qatomic_bootstrap.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qgenericatomic.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qatomic_cxx11.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qatomic_gcc.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qatomic_msvc.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qatomic_armv7.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qatomic_armv6.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qatomic_armv5.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qatomic_ia64.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qatomic_x86.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qatomic_unix.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qglobalstatic.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qmutex.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qnumeric.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qversiontagging.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qhash.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qchar.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qiterator.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qlist.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qrefcount.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qarraydata.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qhashfunctions.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qpair.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qbytearraylist.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qbytearray.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qnamespace.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qstring.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qstringbuilder.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qstringlist.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qregexp.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qstringmatcher.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qmap.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qtextstream.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qiodevice.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qobject.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qobjectdefs.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qobjectdefs_impl.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qcoreevent.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qscopedpointer.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qmetatype.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qvarlengtharray.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qcontainerfwd.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qobject_impl.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qlocale.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qvariant.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qshareddata.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qvector.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qpoint.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qset.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qcontiguouscache.h \
+		../network/tcpserver.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/QList \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtNetwork/QTcpServer \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtNetwork/qtcpserver.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtNetwork/qabstractsocket.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtNetwork/qhostaddress.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtNetwork/QTcpSocket \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtNetwork/qtcpsocket.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o main.o ../network/main.cpp
+
+tcpserver.o: ../network/tcpserver.cpp /opt/Qt5.6.0/5.6/gcc_64/include/QtCore/QBitArray \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qbitarray.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qbytearray.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qrefcount.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qatomic.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qglobal.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qconfig.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qfeatures.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qsystemdetection.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qprocessordetection.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qcompilerdetection.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qtypeinfo.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qtypetraits.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qisenum.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qsysinfo.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qlogging.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qflags.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qglobalstatic.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qmutex.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qnumeric.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qversiontagging.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qbasicatomic.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qatomic_bootstrap.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qgenericatomic.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qatomic_cxx11.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qatomic_gcc.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qatomic_msvc.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qatomic_armv7.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qatomic_armv6.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qatomic_armv5.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qatomic_ia64.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qatomic_x86.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qatomic_unix.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qnamespace.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qarraydata.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qstring.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qchar.h \
+		/opt/Qt5.6.0/5.6/gcc_64/include/QtCore/qstringbuilder.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o tcpserver.o ../network/tcpserver.cpp
+
+moc_tcpserver.o: moc_tcpserver.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_tcpserver.o moc_tcpserver.cpp
 
 ####### Install
 
